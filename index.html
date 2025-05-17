@@ -147,11 +147,12 @@
 
             generateBtn.disabled = true;
             loading.style.display = 'block';
-            output.style.display = 'none';
+            log.style.display = 'none';
 
             try {
                 const result = await ipcRenderer.invoke('run-syft', dirPath, format, outputPath);
                 log.textContent ="SBOM created successfully";
+                 log.style.display = 'block';
                 log.className = 'success';
             } catch (error) {
                 log.textContent = `Error: ${error.error}`;
