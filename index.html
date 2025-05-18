@@ -151,11 +151,11 @@
 
             try {
                 const result = await ipcRenderer.invoke('run-syft', dirPath, format, outputPath);
-                log.textContent ="SBOM created successfully";
+                log.textContent =result.message;
                  log.style.display = 'block';
                 log.className = 'success';
             } catch (error) {
-                log.textContent = `Error: ${error.error}`;
+                log.textContent = `Error: ${error}`;
                 log.style.display = 'block';
                 log.className = 'error';
             } finally {

@@ -15,7 +15,8 @@
     "electron-builder": "^24.9.1"
   },
   "dependencies": {
-    "@electron/remote": "^2.0.12"
+    "@electron/remote": "^2.0.12",
+    "axios": "^1.9.0"
   },
   "build": {
     "appId": "com.syft.gui",
@@ -29,4 +30,4 @@
       "target": "AppImage"
     }
   }
-} 
+}
