@@ -90,8 +90,22 @@
 </head>
 <body>
     <div class="container">
-        <h1>Syft SBOM Generator</h1>
+        <h1>SBOM Generator</h1>
         
+        <div class="input-group">
+            <label for="orgCode">Organization Code:</label>
+            <div id="orgCodeDisplay" style="display: none;">
+                <div style="display: flex; gap: 10px; align-items: center;">
+                    <span id="orgCodeText" style="font-weight: 500; color: #2c3e50;"></span>
+                    <button onclick="editOrgCode()" style="background-color: #95a5a6;">Edit</button>
+                </div>
+            </div>
+            <div id="orgCodeInput" style="display: flex; gap: 10px;">
+                <input type="text" id="orgCode" placeholder="Enter your organization code">
+                <button onclick="saveOrgCode()">Save</button>
+            </div>
+        </div>
+
         <div class="input-group">
             <label for="directory">Directory Path:</label>
             <div style="display: flex; gap: 10px;">
@@ -119,6 +133,49 @@
 
     <script>
         const { ipcRenderer } = require('electron');
+
+        // Add function to save org code
+        async function saveOrgCode() {
+            const orgCode = document.getElementById('orgCode').value.trim();
+            if (!orgCode) {
+                alert('Please enter an organization code');
+                return;
+            }
+            
+            try {
+                await ipcRenderer.invoke('save-org-code', orgCode);
+                await loadOrgCode(); // Reload to update display
+            } catch (error) {
+                alert('Error saving organization code: ' + error.message);
+            }
+        }
+
+        // Add function to edit org code
+        function editOrgCode() {
+            document.getElementById('orgCodeDisplay').style.display = 'none';
+            document.getElementById('orgCodeInput').style.display = 'flex';
+            document.getElementById('orgCode').value = document.getElementById('orgCodeText').textContent;
+        }
+
+        // Add function to load saved org code
+        async function loadOrgCode() {
+            try {
+                const orgCode = await ipcRenderer.invoke('get-org-code');
+                if (orgCode) {
+                    document.getElementById('orgCodeText').textContent = orgCode;
+                    document.getElementById('orgCodeDisplay').style.display = 'block';
+                    document.getElementById('orgCodeInput').style.display = 'none';
+                } else {
+                    document.getElementById('orgCodeDisplay').style.display = 'none';
+                    document.getElementById('orgCodeInput').style.display = 'flex';
+                }
+            } catch (error) {
+                console.error('Error loading organization code:', error);
+            }
+        }
+
+        // Load org code when page loads
+        window.addEventListener('DOMContentLoaded', loadOrgCode);
 
         async function selectDirectory() {
             const dirPath = await ipcRenderer.invoke('select-directory');

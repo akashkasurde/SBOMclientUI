@@ -63,6 +63,40 @@ ipcMain.handle('show-save-dialog', async (event, format) => {
   return result.filePath;
 });
 
+// Add function to get org code marker path
+function getOrgCodeMarkerPath() {
+    const rootDir = process.platform === 'win32' ? 'C:\\Users\\Public\\Documents' : '/';
+    return path.join(rootDir, '.org_code');
+}
+
+// Add function to save org code
+async function saveOrgCode(orgCode) {
+    const markerPath = getOrgCodeMarkerPath();
+    await fs.writeFile(markerPath, orgCode);
+}
+
+// Add function to get org code
+async function getOrgCode() {
+    try {
+        const markerPath = getOrgCodeMarkerPath();
+        const orgCode = await fs.readFile(markerPath, 'utf8');
+        return orgCode.trim();
+    } catch {
+        return null;
+    }
+}
+
+// Add IPC handler for saving org code
+ipcMain.handle('save-org-code', async (event, orgCode) => {
+    await saveOrgCode(orgCode);
+    return { success: true };
+});
+
+// Add IPC handler for getting org code
+ipcMain.handle('get-org-code', async () => {
+    return await getOrgCode();
+});
+
 // Handle Syft execution
 ipcMain.handle('run-syft', async (event, dirPath, format, outputPath) => {
   registerDeviceIfNeeded();
@@ -87,8 +121,13 @@ ipcMain.handle('run-syft', async (event, dirPath, format, outputPath) => {
     syftProcess.on('close', async (code) => {
       if (code === 0) {
         try {
-          // Read the generated SBOM file
           const fileContent = await fs.readFile(outputPath);
+          const orgCode = await getOrgCode();
+          
+          if (!orgCode) {
+            reject({ success: false, error: 'Organization code not set. Please set it first.' });
+            return;
+          }
 
           const hostname = os.hostname();
           const timestamp = new Date().toLocaleString('en-US', {
@@ -112,7 +151,6 @@ ipcMain.handle('run-syft', async (event, dirPath, format, outputPath) => {
             } else if (process.platform === 'darwin') {
               serialNumber = execSync('system_profiler SPHardwareDataType | grep "Serial Number (system)" | awk \'{print $4}\'').toString().trim();
             } else {
-              // Linux
               serialNumber = execSync('sudo dmidecode -s system-serial-number').toString().trim();
             }
           } catch (error) {
@@ -133,7 +171,6 @@ ipcMain.handle('run-syft', async (event, dirPath, format, outputPath) => {
             if (macAddress) break;
           }
 
-          // If no MAC address found, generate a unique identifier
           if (!macAddress) {
             macAddress = crypto.randomBytes(6).toString('hex');
           }
@@ -144,7 +181,7 @@ ipcMain.handle('run-syft', async (event, dirPath, format, outputPath) => {
           const blob = new Blob([fileContent]);
           formData.append('sbom_report_file', blob, filename);
           formData.append('serial_name', serialNumber);
-          formData.append('org_code', "ORG-001");
+          formData.append('org_code', orgCode);
 
           const response = await axios.post(`https://report.vmittech.in/api/saveSbom_report`, formData, {
             headers: {
