@@ -215,7 +215,7 @@ async function isDeviceRegistered() {
 }
 
 function getMarkerPath() {
-  const rootDir = process.platform === 'win32' ? 'C:\\Users\\Public\\Documents' : '/';
+  const rootDir = process.platform === 'win32' ? 'C:\\Users\\Public\\Documents' : '/var/tmp';
   return path.join(rootDir, '.device_registered');
 }
 
