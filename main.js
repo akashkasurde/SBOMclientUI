@@ -65,7 +65,7 @@ ipcMain.handle('show-save-dialog', async (event, format) => {
 
 // Add function to get org code marker path
 function getOrgCodeMarkerPath() {
-    const rootDir = process.platform === 'win32' ? 'C:\\Users\\Public\\Documents' : '/';
+    const rootDir = process.platform === 'win32' ? 'C:\\Users\\Public\\Documents' : '/var/tmp';
     return path.join(rootDir, '.org_code');
 }
 
