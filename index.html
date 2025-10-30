@@ -132,8 +132,6 @@
     </div>
 
     <script>
-        const { ipcRenderer } = require('electron');
-
         // Add function to save org code
         async function saveOrgCode() {
             const orgCode = document.getElementById('orgCode').value.trim();
@@ -143,7 +141,7 @@
             }
             
             try {
-                await ipcRenderer.invoke('save-org-code', orgCode);
+                await window.electronAPI.saveOrgCode(orgCode);
                 await loadOrgCode(); // Reload to update display
             } catch (error) {
                 alert('Error saving organization code: ' + error.message);
@@ -160,7 +158,7 @@
         // Add function to load saved org code
         async function loadOrgCode() {
             try {
-                const orgCode = await ipcRenderer.invoke('get-org-code');
+                const orgCode = await window.electronAPI.getOrgCode();
                 if (orgCode) {
                     document.getElementById('orgCodeText').textContent = orgCode;
                     document.getElementById('orgCodeDisplay').style.display = 'block';
@@ -178,7 +176,7 @@
         window.addEventListener('DOMContentLoaded', loadOrgCode);
 
         async function selectDirectory() {
-            const dirPath = await ipcRenderer.invoke('select-directory');
+            const dirPath = await window.electronAPI.selectDirectory();
             if (dirPath) {
                 document.getElementById('directory').value = dirPath;
             }
@@ -197,7 +195,7 @@
             }
 
             // Show save dialog first
-            const outputPath = await ipcRenderer.invoke('show-save-dialog', format);
+            const outputPath = await window.electronAPI.showSaveDialog(format);
             if (!outputPath) {
                 return; // User cancelled
             }
@@ -207,12 +205,12 @@
             log.style.display = 'none';
 
             try {
-                const result = await ipcRenderer.invoke('run-syft', dirPath, format, outputPath);
+                const result = await window.electronAPI.runSyft(dirPath, format, outputPath);
                 log.textContent =result.message;
                  log.style.display = 'block';
                 log.className = 'success';
             } catch (error) {
-                log.textContent = `Error: ${error}`;
+                log.textContent = `Error: ${error.error || error.message || error}`;
                 log.style.display = 'block';
                 log.className = 'error';
             } finally {
@@ -222,4 +220,4 @@
         }
     </script>
 </body>
-</html> 
+</html>

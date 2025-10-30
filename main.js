@@ -5,6 +5,8 @@ const fs = require('fs').promises;
 const axios = require('axios');
 const os = require('os')
 const crypto = require('crypto');
+const { saveOrgCode, getOrgCode } = require('./utils');
+const config = require('./config');
 
 require('@electron/remote/main').initialize()
 
@@ -13,8 +15,9 @@ function createWindow() {
     width: 1200,
     height: 800,
     webPreferences: {
-      nodeIntegration: true,
-      contextIsolation: false,
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
     }
   });
 
@@ -63,29 +66,6 @@ ipcMain.handle('show-save-dialog', async (event, format) => {
   return result.filePath;
 });
 
-// Add function to get org code marker path
-function getOrgCodeMarkerPath() {
-    const rootDir = process.platform === 'win32' ? 'C:\\Users\\Public\\Documents' : '/var/tmp';
-    return path.join(rootDir, '.org_code');
-}
-
-// Add function to save org code
-async function saveOrgCode(orgCode) {
-    const markerPath = getOrgCodeMarkerPath();
-    await fs.writeFile(markerPath, orgCode);
-}
-
-// Add function to get org code
-async function getOrgCode() {
-    try {
-        const markerPath = getOrgCodeMarkerPath();
-        const orgCode = await fs.readFile(markerPath, 'utf8');
-        return orgCode.trim();
-    } catch {
-        return null;
-    }
-}
-
 // Add IPC handler for saving org code
 ipcMain.handle('save-org-code', async (event, orgCode) => {
     await saveOrgCode(orgCode);
@@ -101,17 +81,26 @@ ipcMain.handle('get-org-code', async () => {
 ipcMain.handle('run-syft', async (event, dirPath, format, outputPath) => {
   registerDeviceIfNeeded();
   return new Promise((resolve, reject) => {
+    // Try to find syft in app directory first, then in PATH
     let syftCommand = 'syft';
-    if (process.platform === 'win32') {
-      syftCommand = 'syft.exe';
+    const appPath = app.getAppPath();
+    const localSyft = path.join(appPath, process.platform === 'win32' ? 'syft.exe' : 'syft');
+    
+    try {
+      require('fs').accessSync(localSyft);
+      syftCommand = localSyft;
+    } catch {
+      // Not found locally, use PATH
+      if (process.platform === 'win32') {
+        syftCommand = 'syft.exe';
+      }
     }
 
     const syftProcess = spawn(syftCommand, ['scan', 'dir:' + dirPath, '-o', format, '--file', outputPath]);
     let errorOutput = '';
-    let output = '';
 
-    syftProcess.stdout.on('data', (data) => {
-      output += data
+    syftProcess.stdout.on('data', () => {
+      // Optionally log or handle stdout
     });
 
     syftProcess.stderr.on('data', (data) => {
@@ -161,8 +150,8 @@ ipcMain.handle('run-syft', async (event, dirPath, format, outputPath) => {
           let macAddress;
           const networkInterfaces = os.networkInterfaces();
           for (const interfaceName in networkInterfaces) {
-            const interface = networkInterfaces[interfaceName];
-            for (const info of interface) {
+            const iface = networkInterfaces[interfaceName];
+            for (const info of iface) {
               if (!info.internal && info.mac !== '00:00:00:00:00:00') {
                 macAddress = info.mac.replace(/:/g, '');
                 break;
@@ -183,7 +172,7 @@ ipcMain.handle('run-syft', async (event, dirPath, format, outputPath) => {
           formData.append('serial_name', serialNumber);
           formData.append('org_code', orgCode);
 
-          const response = await axios.post(`https://report.vmittech.in/api/saveSbom_report`, formData, {
+          await axios.post(`${config.apiBaseUrl}/saveSbom_report`, formData, {
             headers: {
               'Content-Type': 'multipart/form-data'
             }
@@ -264,8 +253,8 @@ async function registerDeviceIfNeeded() {
     let macAddress;
     const networkInterfaces = os.networkInterfaces();
     for (const interfaceName in networkInterfaces) {
-      const interface = networkInterfaces[interfaceName];
-      for (const info of interface) {
+      const iface = networkInterfaces[interfaceName];
+      for (const info of iface) {
         if (!info.internal && info.mac !== '00:00:00:00:00:00') {
           macAddress = info.mac.replace(/:/g, '');
           break;
@@ -280,14 +269,14 @@ async function registerDeviceIfNeeded() {
 
     let data = new FormData();
     data.append('macAddress', macAddress);
-    data.append('org_code', 'ORG-001');
+    data.append('org_code', config.defaultOrgCode);
     data.append('serial_name', serialNumber);
     data.append('device_name', hostname);
 
     let config = {
       method: 'post',
       maxBodyLength: Infinity,
-      url: 'https://report.vmittech.in/api/deviceRegister',
+      url: `${config.apiBaseUrl}/deviceRegister`,
       data: data
     };
 
@@ -301,4 +290,4 @@ async function registerDeviceIfNeeded() {
   } catch (error) {
     console.error('Device registration failed1:', error.message);
   }
-} 
+}

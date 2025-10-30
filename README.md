@@ -5,8 +5,9 @@ A cross-platform desktop application for generating Software Bill of Materials (
 ## Prerequisites
 
 1. Node.js (v14 or later)
-2. Syft CLI tool installed and accessible from PATH
+2. Syft CLI tool installed and accessible from PATH, or placed in the same directory as the app executable
    - For installation instructions, visit: https://github.com/anchore/syft#installation
+   - Alternatively, download the Syft binary and place it in the app's directory for portable use
 
 ## Installation
 
@@ -20,7 +21,22 @@ npm install
 
 To run the application in development mode:
 ```bash
+npm install
 npm start
+```
+
+## Testing
+
+Run tests:
+```bash
+npm test
+```
+
+## Linting
+
+Check code quality:
+```bash
+npm run lint
 ```
 
 ## Building
@@ -31,9 +47,19 @@ npm run build
 ```
 
 This will create platform-specific distributables in the `dist` directory:
-- Windows: NSIS installer (.exe)
+- Windows: Portable executable
 - macOS: .dmg file
-- Linux: AppImage
+- Linux: .deb package
+
+## Production Readiness
+
+This application includes security hardening with context isolation and a preload script. Before deploying:
+
+1. Ensure all dependencies are up-to-date and vulnerabilities are addressed.
+2. Run tests and linting (`npm test`, `npm run lint`).
+3. Test the build on target platforms (`npm run build`).
+4. Configure proper code signing for releases.
+5. CI/CD is set up with GitHub Actions for automated testing on pushes and PRs.
 
 ## Usage
 
@@ -60,4 +86,4 @@ If you encounter any issues:
 1. Verify Syft is installed correctly by running `syft version` in your terminal
 2. Ensure you have proper permissions to access the selected directory
 3. Check if the selected directory contains valid source code or artifacts
-4. For Windows users, make sure you're using syft.exe 
+4. For Windows users, make sure you're using syft.exe
