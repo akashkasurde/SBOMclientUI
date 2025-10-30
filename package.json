@@ -20,7 +20,7 @@
     "axios": "^1.9.0"
   },
   "build": {
-    "appId": "com.syft.gui",
+    "appId": "com.vmit.sbom.gui",
     "mac": {
       "category": "public.app-category.developer-tools"
     },
