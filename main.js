@@ -81,19 +81,14 @@ ipcMain.handle('get-org-code', async () => {
 ipcMain.handle('run-syft', async (event, dirPath, format, outputPath) => {
   registerDeviceIfNeeded();
   return new Promise((resolve, reject) => {
-    // Try to find syft in app directory first, then in PATH
-    let syftCommand = 'syft';
-    const appPath = app.getAppPath();
-    const localSyft = path.join(appPath, process.platform === 'win32' ? 'syft.exe' : 'syft');
+    // Set syft path based on platform
+    let syftCommand = '';
     
-    try {
-      require('fs').accessSync(localSyft);
-      syftCommand = localSyft;
-    } catch {
-      // Not found locally, use PATH
-      if (process.platform === 'win32') {
-        syftCommand = 'syft.exe';
-      }
+    if (process.platform === 'win32') {
+      syftCommand = path.join('C:\\Windows', 'syft.exe');
+    } else {
+      // Linux and macOS
+      syftCommand = path.join('/bin', 'syft');
     }
 
     const syftProcess = spawn(syftCommand, ['scan', 'dir:' + dirPath, '-o', format, '--file', outputPath]);
@@ -273,14 +268,15 @@ async function registerDeviceIfNeeded() {
     data.append('serial_name', serialNumber);
     data.append('device_name', hostname);
 
-    let config = {
+    let requestConfig = {
       method: 'post',
       maxBodyLength: Infinity,
       url: `${config.apiBaseUrl}/deviceRegister`,
       data: data
     };
 
-    let response = await axios.request(config)
+    let response = await axios.request(requestConfig)
+    console.log(response)
     if (response.status === 200) {
       await createRegistrationMarker();
       console.log('Device registered successfully');
